@@ -45,7 +45,7 @@
 #include <sqlite3.h>
 #include <sys/types.h>
 /* man 3 sha512 for information on these functions */
-/* requires -lmd */
+/* requires -lmd, good chance of being moved to a separate file */
 #include <sha512.h>
 
 int readconfig(const char *conffile);
@@ -53,3 +53,11 @@ int init_newdb(const char *dbname, const char *key, const char *pass, const char
 int mkexpense_category(const char *dbname, const char *category);
 int insert_transaction(const char *dbname, const char *category, int cost);
 void usage(void);
+
+int
+main(int ac, char **av) {
+	/* declared register as it's going to be used frequently for determining runtime state */
+	register int retc;
+	retc = 0;
+	return(retc);
+}
