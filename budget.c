@@ -39,25 +39,58 @@
  * so ensure you take additional methods to secure the database.
  */
 
+#include <sqlite3.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sqlite3.h>
 #include <sys/types.h>
+#include <unistd.h>
 /* man 3 sha512 for information on these functions */
 /* requires -lmd, good chance of being moved to a separate file */
 #include <sha512.h>
+
+/* declaration of external variables */
+extern char *__progname;
+extern char **environ;
+extern bool dbg;
+
+/* Initialize necessary externs */
+bool dbg = false;
 
 int readconfig(const char *conffile);
 int init_newdb(const char *dbname, const char *key, const char *pass, const char *categories);
 int mkexpense_category(const char *dbname, const char *category);
 int insert_transaction(const char *dbname, const char *category, int cost);
-void usage(void);
+static void usage(void);
 
 int
 main(int ac, char **av) {
 	/* declared register as it's going to be used frequently for determining runtime state */
-	register int retc;
+	register int retc, ch;
 	retc = 0;
+	while ((ch = getopt(ac, av, "hDd:i:e:c:t:T:v")) != -1) {
+		switch (ch) {
+			case 'd':
+				dbg = true;
+				break;
+			case 'D':
+				break;
+			case 'h':
+				usage();
+				retc ^= retc; 
+				return(retc);
+			default:
+				usage();
+				retc ^= retc; 
+				return(retc);
+		}
+	}
 	return(retc);
+}
+
+static void
+usage(void) {
+	fprintf(stderr,"%s: Simple personal finance tracker\n"
+			"\t-h  This help message\n"
+			,__progname);
 }
