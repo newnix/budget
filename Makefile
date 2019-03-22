@@ -43,3 +43,9 @@ help:
 
 config:
 	@$(EDITOR) ${PWD}/Makefile
+
+diff:
+	@fossil diff
+
+commit:
+	@fossil commit
