@@ -1,5 +1,4 @@
 -- Ensure foreign key constraint is enabled.
-PRAGMA foreign_keys = ON;
 -- This is the file that will generate a SQLite3 database for personal finance tracking
 -- I'm not sure what the best method is currently for storing the category info for transactions
 
@@ -35,8 +34,8 @@ CREATE TABLE IF NOT EXISTS days (
 	month integer, -- 1 - 12, cannot be primary key as there's no way to map this with a unique value here
 	day integer, -- one per day in the month
 	CHECK ( month > 0 AND month < 13),
-	CHECK ( day > 0 AND day < 32)
-	--FOREIGN KEY (month) REFERENCES months(no)
+	CHECK ( day > 0 AND day < 32),
+	FOREIGN KEY (month) REFERENCES months(no)
 );
 
 -- Transaction types
@@ -69,7 +68,8 @@ CREATE TABLE IF NOT EXISTS transactions (
 	-- more work needed to ensure they work properly
 	CHECK ( year > 0 ),
 	CHECK ( month > 0 AND month < 13 ),
-	CHECK ( day > 0 AND day < 32)
+	CHECK ( day > 0 AND day < 32),
+	FOREIGN KEY (month) REFERENCES months(no)
 );
 
 
@@ -151,4 +151,10 @@ BEGIN;
 COMMIT;
 -- End populating tables
 
+-- Enable foreign key constraints after base data has been filled in
+-- Disabled for now, does not seem to work properly on DragonFly BSD 5.5-DEVEL, SQLite3 v3.27.1
+-- unclear where the problem is, but when a foreign key constraint of 3=3 fails consistently, 
+-- something is clearly wrong, though I also don't appear to have the option of executing a query in 
+-- a CHECK constraint.
+-- PRAGMA foreign_keys = ON;
 -- NOTE: Later versions should make it possible to encrypt or hash this data on-disk so it's not possible to determine exactly what rows mean anything
