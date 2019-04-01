@@ -65,6 +65,9 @@
 #include <sha512.h>
 
 /* macro definitions */
+#ifndef __BUDGETCONF_H
+#include "budgetconf.h"
+#endif
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
@@ -92,7 +95,7 @@ bool dbg = false;
 int cook(const char *dbname, const char *sqlfile, uint8_t flags);
 void cfree(void *buf, size_t bufsz);
 int readconfig(const char *conffile);
-int init_newdb(const char *dbname, const char *key, const char *pass, const char *categories);
+int init_newdb(dbconfig *dbinfo, const char *categories);
 int mkexpense_category(const char *dbname, const char *category);
 int insert_transaction(const char *dbname, const char *category, int cost);
 static void usage(void);
@@ -178,7 +181,10 @@ readconfig(const char *conffile) {
 	if ((cfd = open(conffile, O_RDONLY)) < 0 ) {
 		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
 				__progname, __FILE__, __LINE__, __func__, strerror(errno));
-		return(1);
+		if (errno == E_NOENT) {
+			sparseconfig(conffile);
+			return(0);
+		}
 	}
 	/* now that we have an open fd, read the file, likely k/v format */
 	close(cfd);
