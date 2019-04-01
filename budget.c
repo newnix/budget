@@ -50,10 +50,14 @@
  * shorten to single characters or abbreviations to enable accelerated processing
  */
 
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <sqlite3.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 /* man 3 sha512 for information on these functions */
@@ -61,8 +65,21 @@
 #include <sha512.h>
 
 /* macro definitions */
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 4096
+#endif
 #define notimp(a) fprintf(stderr,"%s [%s:%u] %s: -%c is not implemented\n", __progname, __FILE__, __LINE__, __func__, a)
 #define pdbg() fprintf(stderr, "%s [%s:%u] %s:", __progname, __FILE__, __LINE__, __func__);
+#define INITDB 0x01 /* 0000 0001 */
+#define HAVEDB 0x02 /* 0000 0010 */
+#define HAVSQL 0x03 /* 0000 0100 */
+#define INITOK 0x07 /* 0000 0111 */
+#define CKMASK 0xFF /* 1111 1111 */
+#define CONINT 0x08 /* 0000 1000 */
+#define HELPME 0x10 /* 0001 0000 */
+#define NOMASK 0x00 /* 0000 0000 */
+#define HAVKEY 0x20 /* 0010 0000 */
+#define HVPASS 0x30 /* 0100 0000 */
 
 /* declaration of external variables */
 extern char *__progname;
@@ -72,6 +89,8 @@ extern bool dbg;
 /* Initialize necessary externs */
 bool dbg = false;
 
+int cook(const char *dbname, const char *sqlfile, uint8_t flags);
+void cfree(void *buf, size_t bufsz);
 int readconfig(const char *conffile);
 int init_newdb(const char *dbname, const char *key, const char *pass, const char *categories);
 int mkexpense_category(const char *dbname, const char *category);
@@ -87,28 +106,40 @@ int
 main(int ac, char **av) {
 	/* declared register as it's going to be used frequently for determining runtime state */
 	register int retc, ch;
+	uint8_t flags;
 	retc = 0;
-	while ((ch = getopt(ac, av, "hDd:i:k:p:v")) != -1) {
+	flags = NOMASK;
+	while ((ch = getopt(ac, av, "hDd:i:k:p:v:f:C:")) != -1) {
 		switch (ch) {
+			case 'C':
+				notimp(ch);
+				break;
 			case 'd':
+				flags |= HAVEDB;
 				notimp(ch);
 				break;
 			case 'D':
 				dbg = true;
 				break;
 			case 'h':
+				flags &= NOMASK;
+				flags |= HELPME;
 				usage();
 				/* unless an initialization allocation failed retc should not be non-zero now */
 				return(retc);
 			case 'k':
+				flags |= HAVKEY;
 				/* key to use for the database decryption (asymmetric cipher), may or may not be password protected */
 				notimp(ch);
 				break;
 			case 'p':
+				flags |= HVPASS;
 				/* password used for the database decryption (symmetric cipher) */
 				notimp(ch);
 				break;
 			default:
+				flags &= NOMASK;
+				flags |= HELPME;
 				usage();
 				return(retc);
 		}
@@ -125,4 +156,31 @@ usage(void) {
 			"\t-k  Asymmetric decryption key location\n"
 			"\t-p  Symmetric decryption password (you probably shouldn't use this)\n"
 			,__progname);
+}
+
+void
+cfree(void *buf, size_t bufsz) {
+	register int i;
+	i = 8; /* smallest reasonable power of 2 */
+	/* while i goes to zero */
+	while (i-->0) { 
+		arc4random_buf(buf, bufsz); /* write garbage to the buffer */
+	}
+	free(buf);
+	buf = NULL;
+}
+
+/* read in the configuration file if provided */
+int
+readconfig(const char *conffile) {
+	int retc, cfd;
+	cfd = retc = 0;
+	if ((cfd = open(conffile, O_RDONLY)) < 0 ) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		return(1);
+	}
+	/* now that we have an open fd, read the file, likely k/v format */
+	close(cfd);
+	return(retc);
 }

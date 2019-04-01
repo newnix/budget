@@ -9,7 +9,7 @@ INCS = -I/usr/local/include
 CC = clang-devel
 DBG ?= -ggdb
 LDFLAGS = --gc-sections,-icf=all,-zrelro,-zcombreloc,-znow
-CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -static -Bstatic -ffreestanding -Wall -Wextra -pedantic -march=native -mtune=native
+CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -static -Bstatic -ffreestanding -Werror -Wall -Wextra -pedantic -march=native -mtune=native
 HELP = -h
 
 ## Run clang's static analyzer
@@ -49,3 +49,8 @@ diff:
 
 commit:
 	@fossil commit
+
+tests:
+	@printf "No tests are currently defined for this project\n"
+
+test: tests
