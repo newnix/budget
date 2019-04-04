@@ -39,7 +39,10 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /* 
  * Set up some size constraints
@@ -54,6 +57,16 @@
 #ifndef HASHLEN
 #define HASHLEN 512
 #endif
+#ifndef WIPECNT
+#define WIPECNT 8
+#endif
+
+/* 
+ * necessary externs
+ */
+extern char *__progname;
+extern char **environ;
+
 /* 
  * Now specify acceptable encryption options 
  */
@@ -93,18 +106,75 @@ typedef struct __dbconf {
 } dbconfig;
 
 /* Create a basic config file if one isn't found */
+void cfree(void *buf, size_t size);
 void sparseconfig(const char *conffile);
 void checkparam(const char *confline, dbconfig *confdata);
+int parseconfig(int *fdptr, dbconfig *dbdata);
 
 /* some basic implementations */
 void
 sparseconfig(const char *conffile) {
 	register int cfd;
-	off_t written;
+	ssize_t retc, written;
+	char *defaults;
 	cfd = 0;
-	written = 0;
+	retc = written = 0;
+	defaults = NULL;
 
 	if ((cfd = open(conffile, O_WRONLY|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR)) < 1 ) {
 		/* we have an invalid fd for this use */
+		fprintf(stderr, "ERR: %s [%s:%u] %s: %s!\n",
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		return;
 	}
+	/* this doesn't feel right at all, but clang was complaining about void* -> char* conversion */
+	if ((defaults = (char *)calloc((size_t)PASS_MAX, sizeof(char))) == NULL) {
+		fprintf(stderr, "%s [%s:%u] %s: %s!\n",
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		close(cfd);
+		return;
+	}
+
+	/* If we reached this point, we have a file descriptor and valid buffer */
+	if ((retc = snprintf(defaults, (size_t)PASS_MAX, "database: %s/.local/.budget\npassword: \ndbhash: \nhashspec: SHA3-512\ncipherspec: ChaCha20\n", getenv("HOME"))) <= 0) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: Unable to write default config data to buffer at %p!\n", 
+				__progname, __FILE__, __LINE__, __func__, (void*)defaults);
+		return;
+	}
+	if ((written = write(cfd, defaults, (size_t)PASS_MAX)) != retc) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: Wrote less than expected, be sure to check %s/.config/budget.conf is correct!\nAttempting to continue with defaults...\n",
+				__progname, __FILE__, __LINE__, __func__, getenv("HOME"));
+	}
+	/* ensure that the data has been committed to disk */
+	fsync(cfd);
+	close(cfd);
+	cfree(defaults, (size_t)PASS_MAX);
+	/* ensure that *defaults is set to NULL */
+	defaults = NULL;
+}
+
+int 
+parseconfig(int *fdptr, dbconfig *dbdata) {
+	/* read from the given fd pointer and build the dbdata struct */
+	int retc;
+	retc = 0;
+	if ((fdptr != NULL) && (dbdata != NULL) && (*fdptr > 2) ) {
+		/* now we do things */
+	}
+	return(retc);
+}
+
+void
+cfree(void *buf, size_t size) {
+	register int i;
+	i = WIPECNT;
+	/* 
+	 * while i goes to zero, 
+	 * fill buffer with garbage
+	 */
+	while (i-->0) {
+		arc4random_buf(buf, size);
+	}
+	free(buf);
+	buf = NULL;
 }

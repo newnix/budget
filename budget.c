@@ -73,16 +73,17 @@
 #endif
 #define notimp(a) fprintf(stderr,"%s [%s:%u] %s: -%c is not implemented\n", __progname, __FILE__, __LINE__, __func__, a)
 #define pdbg() fprintf(stderr, "%s [%s:%u] %s:", __progname, __FILE__, __LINE__, __func__);
+#define NOMASK 0x00 /* 0000 0000 */
 #define INITDB 0x01 /* 0000 0001 */
 #define HAVEDB 0x02 /* 0000 0010 */
 #define HAVSQL 0x03 /* 0000 0100 */
-#define INITOK 0x07 /* 0000 0111 */
-#define CKMASK 0xFF /* 1111 1111 */
 #define CONINT 0x08 /* 0000 1000 */
 #define HELPME 0x10 /* 0001 0000 */
-#define NOMASK 0x00 /* 0000 0000 */
 #define HAVKEY 0x20 /* 0010 0000 */
-#define HVPASS 0x30 /* 0100 0000 */
+#define HVPASS 0x40 /* 0100 0000 */
+#define HAVCFG 0x80 /* 1000 0000 */
+#define INITOK 0x07 /* 0000 0111 */
+#define CKMASK 0xFF /* 1111 1111 */
 
 /* declaration of external variables */
 extern char *__progname;
@@ -93,7 +94,6 @@ extern bool dbg;
 bool dbg = false;
 
 int cook(const char *dbname, const char *sqlfile, uint8_t flags);
-void cfree(void *buf, size_t bufsz);
 int readconfig(const char *conffile);
 int init_newdb(dbconfig *dbinfo, const char *categories);
 int mkexpense_category(const char *dbname, const char *category);
@@ -115,6 +115,7 @@ main(int ac, char **av) {
 	while ((ch = getopt(ac, av, "hDd:i:k:p:v:f:C:")) != -1) {
 		switch (ch) {
 			case 'C':
+				flags |= HAVCFG;
 				notimp(ch);
 				break;
 			case 'd':
@@ -161,32 +162,37 @@ usage(void) {
 			,__progname);
 }
 
-void
-cfree(void *buf, size_t bufsz) {
-	register int i;
-	i = 8; /* smallest reasonable power of 2 */
-	/* while i goes to zero */
-	while (i-->0) { 
-		arc4random_buf(buf, bufsz); /* write garbage to the buffer */
-	}
-	free(buf);
-	buf = NULL;
+int
+cook(const char *dbname, const char *sqlfile, uint8_t flags) {
+	int retc;
+	retc = 0;
+	return(retc);
 }
 
 /* read in the configuration file if provided */
 int
 readconfig(const char *conffile) {
 	int retc, cfd;
+	dbconfig *dbdata;
 	cfd = retc = 0;
-	if ((cfd = open(conffile, O_RDONLY)) < 0 ) {
+	dbdata = NULL;
+
+	if ((dbdata = calloc((size_t)1, sizeof(dbconfig))) == NULL) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n", 
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		return(1);
+	}
+	if ((cfd = open(conffile, O_RDONLY|O_CLOEXEC)) < 0 ) {
 		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
 				__progname, __FILE__, __LINE__, __func__, strerror(errno));
-		if (errno == E_NOENT) {
+		if (errno == ENOENT) {
 			sparseconfig(conffile);
-			return(0);
+			return(2);
 		}
+		parseconfig(&cfd, dbdata);
 	}
 	/* now that we have an open fd, read the file, likely k/v format */
+	cfree(dbdata, sizeof(dbconfig));
 	close(cfd);
 	return(retc);
 }
