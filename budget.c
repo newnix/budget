@@ -65,25 +65,12 @@
 #include <sha512.h>
 
 /* macro definitions */
+#ifndef __EXILE_BUDGET_H
+#include "budget.h"
+#endif
 #ifndef __BUDGETCONF_H
 #include "budgetconf.h"
 #endif
-#ifndef PAGE_SIZE
-#define PAGE_SIZE 4096
-#endif
-#define notimp(a) fprintf(stderr,"%s [%s:%u] %s: -%c is not implemented\n", __progname, __FILE__, __LINE__, __func__, a)
-#define pdbg() fprintf(stderr, "%s [%s:%u] %s:", __progname, __FILE__, __LINE__, __func__);
-#define NOMASK 0x00 /* 0000 0000 */
-#define INITDB 0x01 /* 0000 0001 */
-#define HAVEDB 0x02 /* 0000 0010 */
-#define HAVSQL 0x03 /* 0000 0100 */
-#define CONINT 0x08 /* 0000 1000 */
-#define HELPME 0x10 /* 0001 0000 */
-#define HAVKEY 0x20 /* 0010 0000 */
-#define HVPASS 0x40 /* 0100 0000 */
-#define HAVCFG 0x80 /* 1000 0000 */
-#define INITOK 0x07 /* 0000 0111 */
-#define CKMASK 0xFF /* 1111 1111 */
 
 /* declaration of external variables */
 extern char *__progname;
@@ -93,11 +80,7 @@ extern bool dbg;
 /* Initialize necessary externs */
 bool dbg = false;
 
-int cook(const char *dbname, const char *sqlfile, uint8_t flags);
-int readconfig(const char *conffile);
-int init_newdb(dbconfig *dbinfo, const char *categories);
-int mkexpense_category(const char *dbname, const char *category);
-int insert_transaction(const char *dbname, const char *category, int cost);
+/* Only function specific to this file aside from main() */
 static void usage(void);
 
 /* 
@@ -110,9 +93,10 @@ main(int ac, char **av) {
 	/* declared register as it's going to be used frequently for determining runtime state */
 	register int retc, ch;
 	uint8_t flags;
+	char *dbname, *cfgfile, *enckey, *initfile;
 	retc = 0;
 	flags = NOMASK;
-	while ((ch = getopt(ac, av, "hDd:i:k:p:v:f:C:")) != -1) {
+	while ((ch = getopt(ac, av, "hDd:ik:v:f:C:")) != -1) {
 		switch (ch) {
 			case 'C':
 				flags |= HAVCFG;
@@ -136,11 +120,6 @@ main(int ac, char **av) {
 				/* key to use for the database decryption (asymmetric cipher), may or may not be password protected */
 				notimp(ch);
 				break;
-			case 'p':
-				flags |= HVPASS;
-				/* password used for the database decryption (symmetric cipher) */
-				notimp(ch);
-				break;
 			default:
 				flags &= NOMASK;
 				flags |= HELPME;
@@ -148,24 +127,56 @@ main(int ac, char **av) {
 				return(retc);
 		}
 	}
+	ac -= optind;
+	av += optind;
+	retc = cook(dbname, initfile, cfgfile, enckey, flags);
 	return(retc);
 }
 
 static void
 usage(void) {
 	fprintf(stderr,"%s: Simple personal finance tracker\n"
+			"\t%s [flags] [command] [args]\n"
+			"Flags:\n"
 			"\t-D  Enable debugging printouts\n"
-			"\t-d  Specify the budget database to use\n"
+			"\t-d  Specify the budget database to use (Default: %s/.local/%s\n"
 			"\t-h  This help message\n"
 			"\t-k  Asymmetric decryption key location\n"
-			"\t-p  Symmetric decryption password (you probably shouldn't use this)\n"
-			,__progname);
+			"Commands:\n"
+			"\t...Still Loading...\n"
+			,__progname, __progname, getenv("HOME"), __progname);
 }
 
 int
-cook(const char *dbname, const char *sqlfile, uint8_t flags) {
+cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *enckey, uint8_t flags) {
 	int retc;
+	sqlite3 *dbptr;
 	retc = 0;
+	dbptr = NULL;
+
+	/* ensure that we read the config file if provided */
+	if ((flags & HAVCFG) == HAVCFG) {
+		retc = readconfig(cfgfile);
+		/* clear the HAVCFG bit after successful processing */
+		flags = (retc == 0) ? flags ^ HAVCFG : flags;
+	}
+
+	/* Branch off based on flag value */
+	switch (flags & CKMASK) {
+		case HAVEDB:
+			retc = connect(dbname, dbptr);
+			break;
+		case HAVKEY|HAVEDB:
+			retc = decrypt(dbname, enckey);
+			break;
+		case INITOK:
+			retc = initialize(dbname, dbptr, sqlfile);
+		default:
+			/* Something has gone wrong */
+			fprintf(stderr, "ERR: %s [%s:%u] %s: This should not be possible\n", 
+					__progname, __FILE__, __LINE__, __func__);
+			return(-1);
+	}
 	return(retc);
 }
 
@@ -194,5 +205,74 @@ readconfig(const char *conffile) {
 	/* now that we have an open fd, read the file, likely k/v format */
 	cfree(dbdata, sizeof(dbconfig));
 	close(cfd);
+	return(retc);
+}
+
+int
+connect(const char *dbname, sqlite3 *dbptr) {
+	int retc;
+	struct stat dbstat;
+	retc = 0;
+	if (dbname == NULL) {
+		retc = -1;
+	}
+	if ((retc = stat(dbname, &dbstat)) != 0) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		fprintf(stderr, "Ensure that %s is an initialized budget database\n", dbname);
+		return(retc);
+	}
+	if (dbptr != NULL) {
+		retc = -1;
+		fprintf(stderr, "ERR: %s [%s:%u] %s: This should not be possible\n",
+				__progname, __FILE__, __LINE__, __func__);
+	}
+	/* causes linker failure for some reason */
+	//if ((retc = sqlite3_open_v2(dbname, &dbptr, SQLITE_OPEN_READWRITE, NULL)) != 0) {
+	//	return(retc);
+	//}
+	return(retc);
+}
+
+int 
+decrypt(const char *dbname, const char *enckey) {
+	int retc;
+	struct stat dbfile, keyfile;
+	retc = 0;
+	/* simple tests to ensure passed data actually exists */
+	if ((retc = stat(dbname, &dbfile)) != 0) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		return(retc);
+	}
+	if ((retc = stat(enckey, &keyfile)) != 0) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		return(retc);
+	}
+	return(retc);
+}
+
+int
+initialize(const char *dbname, sqlite3 *dbptr, const char *sqlfile) {
+	int retc;
+	struct stat dbfile, sqlstat;
+	retc = 0;
+	/* sanity checks on data passed to function */
+	if ((retc = stat(dbname, &dbfile)) != 0) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		return(retc);
+	}
+	if ((retc = stat(sqlfile, &sqlstat)) != 0) {
+		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
+				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		return(retc);
+	}
+	if (dbptr != NULL) {
+		retc = -1;
+		fprintf(stderr, "ERR: %s [%s:%u] %s: Database handle is not NULL, are you sure %s needs to be initialized?\n",
+				__progname, __FILE__, __LINE__, __func__, dbname);
+	}
 	return(retc);
 }

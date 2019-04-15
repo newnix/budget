@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS xcats (
 );
 
 -- Create the main table
+-- This could use a date value, but it would require more
+-- work to properly request date bounded information.
 CREATE TABLE IF NOT EXISTS transactions (
 	year int, -- Should be obvious, year of the transaction
 	month integer, -- Restrict month data to valid months
@@ -103,9 +105,18 @@ COMMIT;
 BEGIN;
 	INSERT INTO xcats VALUES
 	(0, 'CARPAYMENT'), (1, 'UTILITIES'), (2, 'DEBT'), (3, 'GROCERIES'), (4, 'ELECTRONICS'), (5, 'GAMES'), (6, 'MOVIES'), (7, 'FOOD'), (8, 'DATES'), (9, 'ALCOHOL'),
-	(10, 'TRAVEL'), (11, 'EXILE'), (12, 'GUNS'), (13, 'GAS'), (14, 'GOLD'), (15, 'SILVER'), (16, 'STOCKS'), (17, 'RETIREMENT'), (18, 'EHI'), (19, 'PAID'), (20, 'ADJUST');
+	(10, 'TRAVEL'), (11, 'EXILE'), (12, 'GUNS'), (13, 'GAS'), (14, 'GOLD'), (15, 'SILVER'), (16, 'STOCKS'), (17, 'RETIREMENT'), (18, 'EHI'), (19, 'PAID'), (20, 'ADJUST'), 
+	(21, 'METALS'), (22, 'GEMS');
 COMMIT;
 -- End populating tables
 
 -- PRAGMA foreign_keys = ON;
 -- NOTE: Later versions should make it possible to encrypt or hash this data on-disk so it's not possible to determine exactly what rows mean anything
+
+-- Reminders on how to collect certain types of data
+-- Balance according to tracked data:
+--	select (select sum(amount) from transactions where type=4) - (select sum(amount) from transactions where type<>4) as balance;
+-- Category by name:
+--	select sum(tx.amount) from transactions as tx where category=(select key from xcats where cat='PAID');
+-- Type by name:
+--	select sum(amount) from transactions where type=(select key from xtypes where type='EXPENSE');

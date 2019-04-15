@@ -5,11 +5,12 @@ DESTDIR = /bin
 TARGET = budget
 SRCS = budget.c
 INCS = -I/usr/local/include
+LIBS = -L/usr/local/lib
 
 CC = clang-devel
 DBG ?= -ggdb
 LDFLAGS = --gc-sections,-icf=all,-zrelro,-zcombreloc,-znow
-CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -static -Bstatic -ffreestanding -Werror -Wall -Wextra -pedantic -march=native -mtune=native
+CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -Werror -Wall -Wextra -pedantic -march=native -mtune=native ${INCS} #${LIBS} -lsqlite3
 HELP = -h
 
 ## Run clang's static analyzer
