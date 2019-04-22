@@ -53,6 +53,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <sqlite3.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -255,9 +256,11 @@ decrypt(const char *dbname, const char *enckey) {
 
 int
 initialize(const char *dbname, sqlite3 *dbptr, const char *sqlfile) {
-	int retc;
+	int retc, initfd;
 	struct stat dbfile, sqlstat;
-	retc = 0;
+	char *sqlinit;
+	initfd = retc = 0;
+	sqlinit = NULL;
 	/* sanity checks on data passed to function */
 	if ((retc = stat(dbname, &dbfile)) != 0) {
 		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
@@ -268,11 +271,29 @@ initialize(const char *dbname, sqlite3 *dbptr, const char *sqlfile) {
 		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
 				__progname, __FILE__, __LINE__, __func__, strerror(errno));
 		return(retc);
+	} else {
+		/* Get a file descriptor for this file */
+		if ((initfd = open(sqlfile, O_RDONLY|O_DIRECT|O_EXLOCK)) >= 0) {
+			fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
+					__progname, __FILE__, __LINE__, __func__, strerror(errno));
+			return(initfd);
+		}
 	}
 	if (dbptr != NULL) {
 		retc = -1;
 		fprintf(stderr, "ERR: %s [%s:%u] %s: Database handle is not NULL, are you sure %s needs to be initialized?\n",
 				__progname, __FILE__, __LINE__, __func__, dbname);
+	} else {
+		if ((retc = sqlite3_open_v2(dbname,&dbptr,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,NULL)) != SQLITE_OK) {
+			fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n", 
+					__progname, __FILE__, __LINE__, __func__, sqlite3_errstr(retc));
+			return(retc);
+		}
+		if ((sqlinit = mmap(NULL, sqlstat.st_size, PROT_READ, MAP_NOCORE|MAP_PRIVATE,initfd,(off_t)0)) == NULL) {
+			fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
+					__progname, __FILE__, __LINE__, __func__, strerror(errno));
+			return(errno);
+		}
 	}
 	return(retc);
 }

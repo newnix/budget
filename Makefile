@@ -3,14 +3,14 @@
 PREFIX ?= ${HOME}
 DESTDIR = /bin
 TARGET = budget
-SRCS = budget.c
+SRCS = budget.c budgetconf.c
 INCS = -I/usr/local/include
 LIBS = -L/usr/local/lib
 
 CC = clang-devel
 DBG ?= -ggdb
 LDFLAGS = --gc-sections,-icf=all,-zrelro,-zcombreloc,-znow
-CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -Werror -Wall -Wextra -pedantic -march=native -mtune=native ${INCS} #${LIBS} -lsqlite3
+CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -Werror -Wall -Wextra -pedantic -march=native -mtune=native ${INCS} ${LIBS} -lsqlite3
 HELP = -h
 
 ## Run clang's static analyzer
@@ -29,6 +29,14 @@ install: ${SRCS}
 	@strip -s ${TARGET}
 	@install -v -m 1755 ${TARGET} ${PREFIX}${DESTDIR}
 	${PREFIX}${DESTDIR}/${TARGET} ${HELP}
+
+## Uninstall
+uninstall: ${TARGET}
+	@rm -Pf ${TARGET} 
+	@rm -Pf ${PREFIX}${DESTDIR}${TARGET}
+
+## Reinstall
+reinstall: uninstall install
 
 ## Display the current settings
 help:

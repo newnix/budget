@@ -32,81 +32,26 @@
  */
 
 /* 
- * This file will hold some of the config file related functions
+ * This file holds definitions for the subcommand parsing 
+ * and execution down certain code paths, it's not necessarily
+ * going to define all necessary subcommand functions, but it'll 
+ * at least contain the parent functions
  */
-/* necessary headers */
+#define __BUDGET_SUBS_H
+
 #include <err.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
+#include <sqlite3.h>
 #include <unistd.h>
 
-/* 
- * Set up some size constraints
- */
-#define __BUDGETCONF_H
-#ifndef PATH_MAX
-#define PATH_MAX 512
-#endif
-#ifndef PASS_MAX
-#define PASS_MAX 1024
-#endif
-#ifndef HASHLEN
-#define HASHLEN 512
-#endif
-#ifndef WIPECNT
-#define WIPECNT 8
+#ifndef __BUDGETCONF_H
+#include "budgetconf.h"
 #endif
 
-/* 
- * necessary externs
- */
-extern char *__progname;
-extern char **environ;
-
-/* 
- * Now specify acceptable encryption options 
- */
-typedef enum __hashspec {
-	none = 0,
-	sha256 = 1,
-	sha512 = 2,
-	whirlpool = 4,
-	shake256 = 8,
-	blake2b512 = 16,
-	sha512256 = 32,
-	sha385 = 64,
-	sha3512 = 128,
-	sha3256 = 256
-} hashspec;
-
-typedef enum __cipherspec {
-	aes256_cbc = 0,
-	aes256_ctr = 1,
-	serpent256_cbc = 2,
-	serpent256_cmc = 4,
-	twofish_cbc = 8,
-	chacha20poly1305 = 16
-} cipherspec;
-
-/* 
- * Ensure we have a dbconfig struct available for manipulation
- */
-typedef struct __dbconf {
-	char dbname[PATH_MAX];
-	/* these members may not actually be used until later vorsions */
-	char password[PASS_MAX];
-	char dbhash[HASHLEN];
-	hashspec hash;
-	cipherspec cipher;
-	/* may add a SQLite3 database pointer in later revisions */
-} dbconfig;
-
-/* Create a basic config file if one isn't found */
-void cfree(void *buf, size_t size);
-void sparseconfig(const char *conffile);
-void checkparam(const char *confline, dbconfig *confdata);
-int parseconfig(int *fdptr, dbconfig *dbdata);
+/* Read the string *input, and assign dbcmd->action accordingly */
+int readaction(const char *input, cmdargs *dbcmd);
+/* This reads the arguments after action and will try to parse out the user intent */
+int parsecmd(const char **instr, cmdargs *dbcmd);
