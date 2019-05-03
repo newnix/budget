@@ -51,7 +51,36 @@
 #include "budgetconf.h"
 #endif
 
+/* 
+ * This may be better as a simple array or
+ * hash map, to allow potentially faster query 
+ * construction based on the command line parsing
+ * TODO: Revisit this topic
+ */
+typedef enum _xtype {
+	expense = 0,
+	deposit = 1,
+	invoice = 2,
+	investment = 3,
+	salary = 4,
+	adjustment = 5
+} xtype;
+
+/*
+ * This is the actual action taken on
+ * the data in the database. 
+ * There should be another enumerable
+ * or a table of some sort to define 
+ * if a user is creating groups or individual records.
+ */
+typedef enum _dbaction {
+	create = 0, /* create a new record */
+	update = 1, /* update an existing record */
+	select = 2, /* pull info out of the database */
+	delete = 3  /* delete a record */
+} dbaction;
+
 /* Read the string *input, and assign dbcmd->action accordingly */
-int readaction(const char *input, cmdargs *dbcmd);
+int readaction(const char *input, dbcmd *dbcmd);
 /* This reads the arguments after action and will try to parse out the user intent */
-int parsecmd(const char **instr, cmdargs *dbcmd);
+int parsecmd(const char **instr, dbcmd *dbcmd);

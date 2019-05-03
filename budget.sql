@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS xcats (
 -- This could use a date value, but it would require more
 -- work to properly request date bounded information.
 CREATE TABLE IF NOT EXISTS transactions (
+	tid varchar(64) UNIQUE NOT NULL, -- Should be a unique, generally incrementing value
 	year int, -- Should be obvious, year of the transaction
 	month integer, -- Restrict month data to valid months
 	day integer, -- Tinyint to try using a byte, as this should never be above 31, hopefully foreign key constraint can do this
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 	CHECK ( year > 0 ),
 	CHECK ( month > 0 AND month < 13 ),
 	CHECK ( day > 0 AND day < 32),
+	PRIMARY KEY (tid),
 	FOREIGN KEY (month) REFERENCES months(no)
 );
 
@@ -109,6 +111,16 @@ BEGIN;
 	(21, 'METALS'), (22, 'GEMS');
 COMMIT;
 -- End populating tables
+
+-- Create some indexes for faster operations
+-- Some may be redundant due to primary keys, but should be better to have than not
+CREATE UNIQUE INDEX IF NOT EXISTS type_idx ON xtypes (key,type);
+CREATE UNIQUE INDEX IF NOT EXISTS cat_idx ON xcats (key,cat);
+CREATE UNIQUE INDEX IF NOT EXISTS months_idx ON months (no,name,abv);
+CREATE INDEX IF NOT EXISTS trans_types ON transactions (tid,type,amount,desc);
+CREATE INDEX IF NOT EXISTS trans_cats ON transactions (tid,category,amount,desc);
+CREATE INDEX IF NOT EXISTS trans_by_year ON transactions (tid,year,amount,desc);
+CREATE INDEX IF NOT EXISTS trans_by_month ON transactions (tid,month,amount,desc);
 
 -- PRAGMA foreign_keys = ON;
 -- NOTE: Later versions should make it possible to encrypt or hash this data on-disk so it's not possible to determine exactly what rows mean anything

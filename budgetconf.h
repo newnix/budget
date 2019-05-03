@@ -34,6 +34,10 @@
 /* 
  * This file will hold some of the config file related functions
  */
+
+/* Before anything else, ensure we have our include macro set */
+#define __BUDGETCONF_H
+
 /* necessary headers */
 #include <err.h>
 #include <errno.h>
@@ -41,13 +45,19 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sqlite3.h>
 #include <string.h>
 #include <unistd.h>
 
 /* 
+ * Pull in other headers if not yet defined
+ */
+#ifndef __BUDGET_SUBS_H
+#include "budget_subc.h"
+#endif
+/* 
  * Set up some size constraints
  */
-#define __BUDGETCONF_H
 #ifndef PATH_MAX
 #define PATH_MAX 512
 #endif
@@ -59,6 +69,9 @@
 #endif
 #ifndef WIPECNT
 #define WIPECNT 8
+#endif
+#ifndef TID_LEN
+#define TID_LEN 65
 #endif
 
 /* 
@@ -102,8 +115,18 @@ typedef struct __dbconf {
 	char dbhash[HASHLEN];
 	hashspec hash;
 	cipherspec cipher;
-	/* may add a SQLite3 database pointer in later revisions */
 } dbconfig;
+
+/* 
+ * Struct for actually holding database manipulation information
+ */
+typedef struct __dbcmd {
+	sqlite3 *dbptr; /* handle for the database being used */
+	unsigned char tid[TID_LEN]; /* 64 bits of data and a NULL terminator */
+	dbaction action;
+	xtype transtype;
+	double amount;
+} dbmcd;
 
 /* Create a basic config file if one isn't found */
 void cfree(void *buf, size_t size);
