@@ -32,83 +32,22 @@
  */
 
 /* 
- * This file will hold some of the config file related functions
+ * This file just handles the declaration 
+ * and signatures of database-specific operations
  */
+#define __EXILE_BUDGET_DB_H
 
-/* Before anything else, ensure we have our include macro set */
-#define __BUDGETCONF_H
-
-/* necessary headers */
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <sys/stat.h>
+#include <sqlite3.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-/* 
- * Set up some size constraints
- */
-#ifndef PATH_MAX
-#define PATH_MAX 512
-#endif
-#ifndef PASS_MAX
-#define PASS_MAX 1024
-#endif
-#ifndef HASHLEN
-#define HASHLEN 512
-#endif
-#ifndef WIPECNT
-#define WIPECNT 16
-#endif
-
-/* 
- * necessary externs
- */
-extern char *__progname;
-extern char **environ;
-
-/* 
- * Now specify acceptable encryption options 
- */
-typedef enum __hashspec {
-	none = 0,
-	sha256 = 1,
-	sha512 = 2,
-	whirlpool = 4,
-	shake256 = 8,
-	blake2b512 = 16,
-	sha512256 = 32,
-	sha385 = 64,
-	sha3512 = 128,
-	sha3256 = 256
-} hashspec;
-
-typedef enum __cipherspec {
-	aes256_cbc = 0,
-	aes256_ctr = 1,
-	serpent256_cbc = 2,
-	serpent256_cmc = 4,
-	twofish_cbc = 8,
-	chacha20poly1305 = 16
-} cipherspec;
-
-/* 
- * Ensure we have a dbconfig struct available for manipulation
- */
-typedef struct __dbconf {
-	char dbname[PATH_MAX];
-	/* these members may not actually be used until later vorsions */
-	char password[PASS_MAX];
-	char dbhash[HASHLEN];
-	hashspec hash;
-	cipherspec cipher;
-} dbconfig;
-
-/* Create a basic config file if one isn't found */
-void cfree(void *buf, size_t size);
-void sparseconfig(const char *conffile);
-void checkparam(const char *confline, dbconfig *confdata);
-int parseconfig(int *fdptr, dbconfig *dbdata);
+/* set the default location to ~/.local/budget */
+#define NX_BUDGET_PREFIX getenv("HOME")
+#define NX_BUDGET_DIR "/.local/"
+#define NX_BUDGET_DB "budget"

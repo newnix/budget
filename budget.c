@@ -50,21 +50,6 @@
  * shorten to single characters or abbreviations to enable accelerated processing
  */
 
-#include <err.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sqlite3.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-/* man 3 sha512 for information on these functions */
-/* requires -lmd, good chance of being moved to a separate file */
-#include <sha512.h>
-
 /* macro definitions */
 #ifndef __EXILE_BUDGET_H
 #include "budget.h"
@@ -97,7 +82,7 @@ main(int ac, char **av) {
 	char *dbname, *cfgfile, *enckey, *initfile;
 	retc = 0;
 	flags = NOMASK;
-	while ((ch = getopt(ac, av, "hDd:ik:v:f:C:")) != -1) {
+	while ((ch = getopt(ac, av, "hDId:ik:v:f:C:")) != -1) {
 		switch (ch) {
 			case 'C':
 				flags |= HAVCFG;
@@ -122,6 +107,7 @@ main(int ac, char **av) {
 				notimp(ch);
 				break;
 			default:
+				notimp(ch);
 				flags &= NOMASK;
 				flags |= HELPME;
 				usage();

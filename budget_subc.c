@@ -31,20 +31,20 @@
  * DAMAGE.
  */
 
-#ifndef __BUDGET_SUBS_H
+#ifndef __EXILE_BUDGET_SUBS_H
 #include "budget_subc.h"
 #endif
 
-int
-readaction(const char *input, cmdargs *dbcmd) {
-	int retc;
-	retc = 0;
-	return(retc);
-}
-
-int
-parsecmd(const char **instr, cmdargs *dbcmd) {
-	int retc;
-	retc = 0;
-	return(retc);
-}
+//int
+//readaction(const char *input, cmdargs *dbcmd) {
+//	int retc;
+//	retc = 0;
+//	return(retc);
+//}
+//
+//int
+//parsecmd(const char **instr, cmdargs *dbcmd) {
+//	int retc;
+//	retc = 0;
+//	return(retc);
+//}

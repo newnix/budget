@@ -3,14 +3,15 @@
 PREFIX ?= ${HOME}
 DESTDIR = /bin
 TARGET = budget
-SRCS = budget.c budgetconf.c
+SRCS = budget.c budgetconf.c budget_subc.c
 INCS = -I/usr/local/include
 LIBS = -L/usr/local/lib
 
 CC = clang-devel
 DBG ?= -ggdb
 LDFLAGS = --gc-sections,-icf=all,-zrelro,-zcombreloc,-znow
-CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -Werror -Wall -Wextra -pedantic -march=native -mtune=native ${INCS} ${LIBS} -lsqlite3
+CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -Werror -Wall -Wextra -pedantic -march=native -mtune=native ${INCS} ${LIBS} -lsqlite3 \
+				 -Wparentheses -Wmissing-prototypes -Wstrict-prototypes
 HELP = -h
 
 ## Run clang's static analyzer

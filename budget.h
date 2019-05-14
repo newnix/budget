@@ -31,12 +31,20 @@
  * DAMAGE.
  */
 
-#include <stdio.h>
-#include <sqlite3.h>
 #define __EXILE_BUDGET_H
-#ifndef __BUDGETCONF_H
-#include "budgetconf.h"
-#endif
+
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sqlite3.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 /* This file will only hold constants, prototypes, and custom types */
 #ifndef PAGE_SIZE
@@ -50,8 +58,14 @@
 #ifndef PARAM_MAX 
 #define PARAM_MAX 1024
 #endif
-#define notimp(a) fprintf(stderr,"%s [%s:%u] %s: -%c is not implemented\n", __progname, __FILE__, __LINE__, __func__, a)
-#define pdbg() fprintf(stderr, "%s [%s:%u] %s:", __progname, __FILE__, __LINE__, __func__);
+
+/* Macros for runtime issues */
+#define notimp(a) fprintf(stderr,"WRN: %s [%s:%u] %s: -%c is not implemented\n", __progname, __FILE__, __LINE__, __func__, a)
+#define nxerr(message) fprintf(stderr,"ERR: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
+#define nxwrn(message) fprintf(stderr,"WRN: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
+#define nxdbg(message) fprintf(stderr,"DBG: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
+
+/* Flags */
 #define NOMASK 0x00 /* 0000 0000 */
 #define INITDB 0x01 /* 0000 0001 */
 #define HAVEDB 0x02 /* 0000 0010 */
@@ -64,6 +78,13 @@
 #define INITOK 0x07 /* 0000 0111 */
 #define CKMASK 0xFF /* 1111 1111 */
 
+/* 
+ * Transaction ID size 
+ */
+#ifndef TID_LEN
+#define TID_LEN 65
+#endif
+
 /* Custom types */
 typedef enum __dbcmds {
 	unknown = 0, /* default, still not sure what we're doing */
@@ -73,15 +94,42 @@ typedef enum __dbcmds {
 	create = 4, /* create new xcats or xtypes */
 	balance = 5, /* get the current estimated balance */
 	show = 6 /* like query, but only accepts a category */
-} dbcmd;
+} dbaction;
 
+/*
+ * Unsure exactly what this should be at this point 
+ */
 typedef struct __cmdargs {
-	dbcmd action;
-	char dbname[PARAM_MAX];
-	sqlite3 *dbptr;
+	dbaction action;
 	/* this will default to a PAGE_SIZE buffer if small enough, else a mmap(2)'d file */
 	unsigned char *dbsql;
 } cmdargs;
+
+/* 
+ * This may be better as a simple array or
+ * hash map, to allow potentially faster query 
+ * construction based on the command line parsing
+ * TODO: Revisit this topic
+ */
+typedef enum _xtype {
+	expense = 0,
+	deposit = 1,
+	invoice = 2,
+	investment = 3,
+	salary = 4,
+	adjustment = 5
+} xtype;
+
+/* 
+ * Struct for actually holding database manipulation information
+ */
+typedef struct __dbcmd {
+	sqlite3 *dbptr; /* handle for the database being used */
+	unsigned char tid[TID_LEN]; /* 64 bits of data and a NULL terminator */
+	dbaction action;
+	xtype transtype;
+	double amount;
+} dbmcd;
 
 /* Function Prototypes */
 int cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *enckey, uint8_t flags);
