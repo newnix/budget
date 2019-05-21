@@ -160,6 +160,8 @@ cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *e
 		case INITOK:
 			if ((retc = opensql(sqlfile, &sqlfd)) == 0) {
 				retc = initialize(dbptr, &sqlfd);
+				/* ensure the file descriptor is actually closed */
+				close(sqlfd);
 			}
 		default:
 			/* Something has gone wrong */
