@@ -50,6 +50,7 @@
  * shorten to single characters or abbreviations to enable accelerated processing
  */
 
+#include <fcntl.h>
 /* macro definitions */
 #ifndef __EXILE_BUDGET_H
 #include "budget.h"
@@ -136,9 +137,9 @@ usage(void) {
 
 int
 cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *enckey, uint8_t flags) {
-	int retc;
+	int retc, sqlfd;
 	sqlite3 *dbptr;
-	retc = 0;
+	retc = sqlfd = 0;
 	dbptr = NULL;
 
 	/* ensure that we read the config file if provided */
@@ -157,11 +158,12 @@ cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *e
 			retc = decrypt(dbname, enckey);
 			break;
 		case INITOK:
-			retc = initialize(dbname, dbptr, sqlfile);
+			if ((retc = opensql(sqlfile, &sqlfd)) == 0) {
+				retc = initialize(dbptr, &sqlfd);
+			}
 		default:
 			/* Something has gone wrong */
-			fprintf(stderr, "ERR: %s [%s:%u] %s: This should not be possible\n", 
-					__progname, __FILE__, __LINE__, __func__);
+			nxerr("Something has gone horribly wrong!");
 			return(-1);
 	}
 	return(retc);
@@ -195,6 +197,9 @@ readconfig(const char *conffile) {
 	return(retc);
 }
 
+/*
+ * Opens the database for use in other functions
+ */
 int
 connect(const char *dbname, sqlite3 *dbptr) {
 	int retc;
@@ -204,15 +209,13 @@ connect(const char *dbname, sqlite3 *dbptr) {
 		retc = -1;
 	}
 	if ((retc = stat(dbname, &dbstat)) != 0) {
-		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
-				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		nxerr(strerror(errno));
 		fprintf(stderr, "Ensure that %s is an initialized budget database\n", dbname);
 		return(retc);
 	}
 	if (dbptr != NULL) {
 		retc = -1;
-		fprintf(stderr, "ERR: %s [%s:%u] %s: This should not be possible\n",
-				__progname, __FILE__, __LINE__, __func__);
+		nxerr("This should not have been possible");
 	}
 	/* causes linker failure for some reason */
 	//if ((retc = sqlite3_open_v2(dbname, &dbptr, SQLITE_OPEN_READWRITE, NULL)) != 0) {
@@ -221,6 +224,10 @@ connect(const char *dbname, sqlite3 *dbptr) {
 	return(retc);
 }
 
+/*
+ * This function is to decrypt the database file itself, not the contents of the database
+ * TODO: Look into how to do this without writing a cleartext database to disk
+ */
 int 
 decrypt(const char *dbname, const char *enckey) {
 	int retc;
@@ -228,58 +235,59 @@ decrypt(const char *dbname, const char *enckey) {
 	retc = 0;
 	/* simple tests to ensure passed data actually exists */
 	if ((retc = stat(dbname, &dbfile)) != 0) {
-		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
-				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		nxerr(strerror(errno));
 		return(retc);
 	}
 	if ((retc = stat(enckey, &keyfile)) != 0) {
-		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
-				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		nxerr(strerror(errno));
 		return(retc);
 	}
 	return(retc);
 }
 
+/* 
+ * TODO: This needs to be rewritten to use connect() for opening the database
+ * TODO: This should be rewritten to accept the file descriptor of the sqlfile rather than the file name
+ * This runs the database initialization after other resources are verified
+ */
 int
-initialize(const char *dbname, sqlite3 *dbptr, const char *sqlfile) {
-	int retc, initfd;
-	struct stat dbfile, sqlstat;
+initialize(sqlite3 *dbptr, int *sqlfd) {
+	int retc;
 	char *sqlinit;
-	initfd = retc = 0;
+	retc = 0;
 	sqlinit = NULL;
-	/* sanity checks on data passed to function */
-	if ((retc = stat(dbname, &dbfile)) != 0) {
-		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
-				__progname, __FILE__, __LINE__, __func__, strerror(errno));
-		return(retc);
-	}
-	if ((retc = stat(sqlfile, &sqlstat)) != 0) {
-		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
-				__progname, __FILE__, __LINE__, __func__, strerror(errno));
-		return(retc);
-	} else {
-		/* Get a file descriptor for this file */
-		if ((initfd = open(sqlfile, O_RDONLY|O_DIRECT|O_EXLOCK)) >= 0) {
-			fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
-					__progname, __FILE__, __LINE__, __func__, strerror(errno));
-			return(initfd);
-		}
-	}
-	if (dbptr != NULL) {
+
+	/* Check to ensure we don't have NULL pointers */
+	if ((dbptr == NULL) || (sqlfd == NULL)) {
+		nxerr("Passed bad pointers!");
 		retc = -1;
-		fprintf(stderr, "ERR: %s [%s:%u] %s: Database handle is not NULL, are you sure %s needs to be initialized?\n",
-				__progname, __FILE__, __LINE__, __func__, dbname);
-	} else {
-		if ((retc = sqlite3_open_v2(dbname,&dbptr,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,NULL)) != SQLITE_OK) {
-			fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n", 
-					__progname, __FILE__, __LINE__, __func__, sqlite3_errstr(retc));
-			return(retc);
-		}
-		if ((sqlinit = mmap(NULL, sqlstat.st_size, PROT_READ, MAP_NOCORE|MAP_PRIVATE,initfd,(off_t)0)) == NULL) {
-			fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
-					__progname, __FILE__, __LINE__, __func__, strerror(errno));
-			return(errno);
-		}
 	}
+	if (retc == 0) {
+	}
+
+	return(retc);
+}
+
+/* 
+ * This function opens the file passed to it and assigns the fd to the pointer passed in
+ */
+int
+opensql(const char *sqlfile, int *sqlfd) {
+	int retc;
+	retc = 0;
+
+	/* Quick sanity check */
+	if ((sqlfile == NULL) || (sqlfd == NULL)) {
+		nxerr("This should not be possible, NULL pointers presented");
+		retc = -1;
+	}
+
+	/* Now that we've got some basic assurance that our pointers mean something, try opening the file */
+	if ((*sqlfd = open(sqlfile,O_RDONLY)) == -1) {
+		nxerr(strerror(errno));
+		retc = -2;
+	}
+
+	/* Nothing else necessary, simply return with the file descriptor assigned */
 	return(retc);
 }

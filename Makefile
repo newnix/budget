@@ -20,13 +20,13 @@ check: ${SRCS}
 
 ## Build with debugging symbols
 debug: ${SRCS}
-	$(CC) ${DBG} ${CFLAGS} ${SRCS} -o ${TARGET}
+	$(CC) ${DBG} ${CFLAGS} $? -o ${TARGET}
 	@install -v -m 1755 ${TARGET} ${PREFIX}${DESTDIR}
 	${PREFIX}${DESTDIR}/${TARGET} ${HELP}
 
 ## Build with debug symbols stripped
 install: ${SRCS}
-	$(CC) ${CFLAGS} ${SRCS} -o ${TARGET}
+	$(CC) ${CFLAGS} $? -o ${TARGET}
 	@strip -s ${TARGET}
 	@install -v -m 1755 ${TARGET} ${PREFIX}${DESTDIR}
 	${PREFIX}${DESTDIR}/${TARGET} ${HELP}

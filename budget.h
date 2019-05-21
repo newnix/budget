@@ -134,7 +134,8 @@ typedef struct __dbcmd {
 /* Function Prototypes */
 int cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *enckey, uint8_t flags);
 int readconfig(const char *conffile);
-int initialize(const char *dbname, sqlite3 *dbptr, const char *sqlfile);
+int initialize(sqlite3 *dbptr, int *sqlfd);
+int opensql(const char *sqlfile, int *sqlfd);
 int mkexpense_category(cmdargs *dbdata, const char *category);
 int insert_transaction(cmdargs *dbdata, const char *category, int cost);
 /* this function may not be necessary any longer */
