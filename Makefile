@@ -64,7 +64,7 @@ commit: ${DVCS}
 	@$(?) commit
 
 push: ${HOME}/bin/gitsync
-	$? -r ${PROJECT}
+	$? -r ${PROJECT} -n master
 
 status: ${DVCS}
 	@$(?) status
