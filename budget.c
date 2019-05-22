@@ -185,8 +185,7 @@ readconfig(const char *conffile) {
 		return(1);
 	}
 	if ((cfd = open(conffile, O_RDONLY|O_CLOEXEC)) < 0 ) {
-		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n",
-				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		nxerr(strerror(errno));
 		if (errno == ENOENT) {
 			sparseconfig(conffile);
 			return(2);
@@ -285,7 +284,7 @@ opensql(const char *sqlfile, int *sqlfd) {
 	}
 
 	/* Now that we've got some basic assurance that our pointers mean something, try opening the file */
-	if ((*sqlfd = open(sqlfile,O_RDONLY)) == -1) {
+	if ((*sqlfd = open(sqlfile,O_RDONLY|O_CLOEXEC)) == -1) {
 		nxerr(strerror(errno));
 		retc = -2;
 	}

@@ -31,6 +31,9 @@
  * DAMAGE.
  */
 
+#ifndef __EXILE_BUDGET_H
+#include "budget.h"
+#endif
 #ifndef __BUDGETCONF_H
 #include "budgetconf.h"
 #endif
@@ -45,24 +48,22 @@ sparseconfig(const char *conffile) {
 	retc = written = 0;
 	defaults = NULL;
 
-	if ((cfd = open(conffile, O_WRONLY|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR)) < 1 ) {
+	if ((cfd = open(conffile, O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1 ) {
 		/* we have an invalid fd for this use */
-		fprintf(stderr, "ERR: %s [%s:%u] %s: %s!\n",
-				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		nxerr(strerror(errno));
 		return;
 	}
 	/* this doesn't feel right at all, but clang was complaining about void* -> char* conversion */
 	if ((defaults = (char *)calloc((size_t)PASS_MAX, sizeof(char))) == NULL) {
-		fprintf(stderr, "%s [%s:%u] %s: %s!\n",
-				__progname, __FILE__, __LINE__, __func__, strerror(errno));
+		nxerr(strerror(errno));
 		close(cfd);
 		return;
 	}
 
 	/* If we reached this point, we have a file descriptor and valid buffer */
 	if ((retc = snprintf(defaults, (size_t)PASS_MAX, "database: %s/.local/.budget\npassword: \ndbhash: \nhashspec: SHA3-512\ncipherspec: ChaCha20\n", getenv("HOME"))) <= 0) {
-		fprintf(stderr, "ERR: %s [%s:%u] %s: Unable to write default config data to buffer at %p!\n", 
-				__progname, __FILE__, __LINE__, __func__, (void*)defaults);
+		nxerr("Unable to write to buffer!");
+		cfree(defaults,(size_t)PASS_MAX);
 		return;
 	}
 	if ((written = write(cfd, defaults, (size_t)PASS_MAX)) != retc) {

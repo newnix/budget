@@ -1,11 +1,14 @@
 .POSIX:
 
+PROJECT ?= budget
+DVCS ?= /usr/local/bin/fossil
 PREFIX ?= ${HOME}
 DESTDIR = /bin
 TARGET = budget
 SRCS = budget.c budgetconf.c budget_subc.c
 INCS = -I/usr/local/include
 LIBS = -L/usr/local/lib
+TARGETS = check debug install uninstall reinstall help config diff commit push status test tests
 
 CC = clang-devel
 DBG ?= -ggdb
@@ -54,11 +57,17 @@ help:
 config:
 	@$(EDITOR) ${PWD}/Makefile
 
-diff:
-	@fossil diff
+diff: ${DVCS}
+	@$(?) diff
 
-commit:
-	@fossil commit
+commit: ${DVCS}
+	@$(?) commit
+
+push: ${HOME}/bin/gitsync
+	$? -r ${PROJECT}
+
+status: ${DVCS}
+	@$(?) status
 
 tests:
 	@printf "No tests are currently defined for this project\n"
