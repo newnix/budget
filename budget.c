@@ -50,14 +50,43 @@
  * shorten to single characters or abbreviations to enable accelerated processing
  */
 
+#include <err.h>
+#include <errno.h>
 #include <fcntl.h>
+/* may not actually be necessary for these functions */
+#include <sys/mman.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sqlite3.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 /* macro definitions */
 #ifndef __EXILE_BUDGET_H
 #include "budget.h"
 #endif
+/* */
 #ifndef __BUDGETCONF_H
 #include "budgetconf.h"
 #endif
+
+/* Flags */
+#define NOMASK 0x00 /* 0000 0000 */
+#define INITDB 0x01 /* 0000 0001 */
+#define HAVEDB 0x02 /* 0000 0010 */
+#define HAVSQL 0x03 /* 0000 0100 */
+#define CONINT 0x08 /* 0000 1000 */
+#define HELPME 0x10 /* 0001 0000 */
+#define HAVKEY 0x20 /* 0010 0000 */
+#define HVPASS 0x40 /* 0100 0000 */
+#define HAVCFG 0x80 /* 1000 0000 */
+#define INITOK 0x07 /* 0000 0111 */
+#define CKMASK 0xFF /* 1111 1111 */
+
 
 /* declaration of external variables */
 extern char *__progname;
@@ -127,12 +156,12 @@ usage(void) {
 			"\t%s [flags] [command] [args]\n"
 			"Flags:\n"
 			"\t-D  Enable debugging printouts\n"
-			"\t-d  Specify the budget database to use (Default: %s/.local/%s\n"
+			"\t-d  Specify the budget database to use (Default: %s%s/%s)\n"
 			"\t-h  This help message\n"
 			"\t-k  Asymmetric decryption key location\n"
 			"Commands:\n"
 			"\t...Still Loading...\n"
-			,__progname, __progname, getenv("HOME"), __progname);
+			,__progname, __progname, DEFAULT_BUDGET_PARENTDIR, DEFAULT_BUDGET_DIR, DEFAULT_BUDGET_DB);
 }
 
 int

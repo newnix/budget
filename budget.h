@@ -33,18 +33,12 @@
 
 #define __EXILE_BUDGET_H
 
-#include <err.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <pthread.h>
-#include <stdbool.h>
+/* 
+ * These should probably be moved out of the headers unless strictly necessary for struct definitions
+ */
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sqlite3.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 /* This file will only hold constants, prototypes, and custom types */
 #ifndef PAGE_SIZE
@@ -65,18 +59,10 @@
 #define nxwrn(message) fprintf(stderr,"WRN: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
 #define nxdbg(message) fprintf(stderr,"DBG: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
 
-/* Flags */
-#define NOMASK 0x00 /* 0000 0000 */
-#define INITDB 0x01 /* 0000 0001 */
-#define HAVEDB 0x02 /* 0000 0010 */
-#define HAVSQL 0x03 /* 0000 0100 */
-#define CONINT 0x08 /* 0000 1000 */
-#define HELPME 0x10 /* 0001 0000 */
-#define HAVKEY 0x20 /* 0010 0000 */
-#define HVPASS 0x40 /* 0100 0000 */
-#define HAVCFG 0x80 /* 1000 0000 */
-#define INITOK 0x07 /* 0000 0111 */
-#define CKMASK 0xFF /* 1111 1111 */
+/* Some default location macros */
+#define DEFAULT_BUDGET_PARENTDIR getenv("HOME")
+#define DEFAULT_BUDGET_DIR "/.local"
+#define DEFAULT_BUDGET_DB ".budget"
 
 /* 
  * Transaction ID size 

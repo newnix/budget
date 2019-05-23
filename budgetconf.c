@@ -31,12 +31,25 @@
  * DAMAGE.
  */
 
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+/* Project specific headers */
 #ifndef __EXILE_BUDGET_H
 #include "budget.h"
 #endif
 #ifndef __BUDGETCONF_H
 #include "budgetconf.h"
 #endif
+
+extern char *__progname;
+extern char **environ;
+extern bool dbg;
 
 /* some basic implementations */
 void

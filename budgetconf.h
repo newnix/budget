@@ -38,15 +38,8 @@
 /* Before anything else, ensure we have our include macro set */
 #define __BUDGETCONF_H
 
-/* necessary headers */
-#include <err.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+/* Only necessary header for types used in this file */
+#include <sys/types.h>
 
 /* 
  * Set up some size constraints
@@ -63,12 +56,6 @@
 #ifndef WIPECNT
 #define WIPECNT 16
 #endif
-
-/* 
- * necessary externs
- */
-extern char *__progname;
-extern char **environ;
 
 /* 
  * Now specify acceptable encryption options 
