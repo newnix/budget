@@ -6,6 +6,9 @@ PREFIX ?= ${HOME}
 DESTDIR = /bin
 TARGET = budget
 SRCS = budget.c budgetconf.c budget_subc.c
+## These should be separate targets for the linker to put together
+## while it shouldn't make much of a difference in practice, it can reduce the amount of compilation done
+OBJS = budget.o budgetconf.o budget_subc.o
 INCS = -I/usr/local/include
 LIBS = -L/usr/local/lib
 TARGETS = check debug install uninstall reinstall help config diff commit push status test tests
