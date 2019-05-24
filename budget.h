@@ -58,6 +58,7 @@
 #define nxerr(message) fprintf(stderr,"ERR: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
 #define nxwrn(message) fprintf(stderr,"WRN: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
 #define nxdbg(message) fprintf(stderr,"DBG: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
+#define nxinf(message) fprintf(stderr,"INF: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
 
 /* Some default location macros */
 #define DEFAULT_BUDGET_PARENTDIR getenv("HOME")

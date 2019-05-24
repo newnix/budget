@@ -17,7 +17,10 @@ CC = clang-devel
 DBG ?= -ggdb
 LDFLAGS = --gc-sections,-icf=all,-zrelro,-zcombreloc,-znow
 CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -Werror -Wall -Wextra -pedantic -march=native -mtune=native ${INCS} ${LIBS} -lsqlite3 \
-				 -Wparentheses -Wmissing-prototypes -Wstrict-prototypes
+				 -Wparentheses -Wmissing-prototypes -Wstrict-prototypes -fuse-ld=${GOLD} 
+## I prefer the llvm toolchain, but in practice the GOLD linker could be better for some use cases
+LD = /usr/local/bin/ld.lld-devel
+GOLD = /usr/bin/ld.gold
 HELP = -h
 
 ## Run clang's static analyzer
@@ -26,7 +29,7 @@ check: ${SRCS}
 
 ## Build with debugging symbols
 debug: ${SRCS}
-	$(CC) ${DBG} ${CFLAGS} $? -o ${TARGET}
+	$(CC) ${DBG} ${CFLAGS} ${LIBS} ${INCS} $? -o ${TARGET}
 	@install -v -m 1755 ${TARGET} ${PREFIX}${DESTDIR}
 	${PREFIX}${DESTDIR}/${TARGET} ${HELP}
 

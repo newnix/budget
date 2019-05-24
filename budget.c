@@ -157,6 +157,7 @@ usage(void) {
 			"Flags:\n"
 			"\t-D  Enable debugging printouts\n"
 			"\t-d  Specify the budget database to use (Default: %s%s/%s)\n"
+			"\t-f  Specify a SQL file to use in bootstrap/exchange functions\n"
 			"\t-h  This help message\n"
 			"\t-k  Asymmetric decryption key location\n"
 			"Commands:\n"
@@ -247,10 +248,10 @@ connect(const char *dbname, sqlite3 *dbptr) {
 		retc = -1;
 		nxerr("This should not have been possible");
 	}
-	/* causes linker failure for some reason */
-	//if ((retc = sqlite3_open_v2(dbname, &dbptr, SQLITE_OPEN_READWRITE, NULL)) != 0) {
-	//	return(retc);
-	//}
+	/* XXX: The shared caching mode may not be of any benefit, revisit later on in development */
+	if ((retc = sqlite3_open_v2(dbname, &dbptr, SQLITE_OPEN_READWRITE|SQLITE_OPEN_NOMUTEX|SQLITE_OPEN_SHAREDCACHE, NULL)) != SQLITE_OK) {
+		nxerr(sqlite3_errstr(retc));
+	}
 	return(retc);
 }
 
@@ -276,23 +277,43 @@ decrypt(const char *dbname, const char *enckey) {
 }
 
 /* 
- * TODO: This needs to be rewritten to use connect() for opening the database
- * TODO: This should be rewritten to accept the file descriptor of the sqlfile rather than the file name
  * This runs the database initialization after other resources are verified
+ * XXX: Will need to verify initialization loop works properly
+ * TODO: Add in runtime tracing 
  */
 int
 initialize(sqlite3 *dbptr, int *sqlfd) {
 	int retc;
-	char *sqlinit;
+	struct stat sqlstat;
+	char *sqlinit, *sqlstart; 
+	const char *sqltail;
+	sqlite3_stmt *budgetq;
 	retc = 0;
-	sqlinit = NULL;
+	sqlinit = NULL; sqlstart = NULL; sqltail = NULL;
 
 	/* Check to ensure we don't have NULL pointers */
 	if ((dbptr == NULL) || (sqlfd == NULL)) {
 		nxerr("Passed bad pointers!");
 		retc = -1;
 	}
+	if ((retc = fstat(*sqlfd, &sqlstat)) == -1) {
+		nxerr(strerror(errno));
+	}
 	if (retc == 0) {
+		/* If retc has not been set to a nonzero number, map the initialization file to build the database */
+		if ((sqlinit = mmap(NULL,(size_t)sqlstat.st_size,PROT_READ,MAP_PRIVATE,*sqlfd,(off_t)0)) != NULL) {
+			/* Now start the read/update loop after recording the start of mapped data */
+			sqlstart = sqlinit; /* recorded to ensure munmap() is called on the start of mapped memory */
+			nxinf("Initializing budgeting database...");
+			for (;(retc == SQLITE_OK) || (retc == SQLITE_DONE); sqlinit = (char * const)sqltail) {
+				retc = sqlite3_prepare_v2(dbptr,sqlinit,-1,&budgetq,&sqltail); /* pass -1 as length to read up to NULL terminator */
+				retc = sqlite3_step(budgetq);
+				if (retc != SQLITE_DONE) {
+					nxerr(sqlite3_errstr(retc));
+				}
+				sqlite3_finalize(budgetq);
+			}
+		}
 	}
 
 	return(retc);
