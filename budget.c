@@ -100,9 +100,9 @@ bool dbg = false;
 static void usage(void);
 
 /* 
- * To hopefully support UTF-8 properly, all other characters other than those needed for the **av
- * array should be treated as uint8_t or wchar_t, though wchar_t is less than ideal when it comes 
- * to storing the character/glyph data efficiently
+ * In order to properly support UTF-8, I'll most likely need the ICU library or similar for
+ * encoding/decoding non-ASCII text. This is intended to be supported later on, after at least the core
+ * logic is set up and verified as functional.
  */
 int
 main(int ac, char **av) {
@@ -172,6 +172,9 @@ cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *e
 	retc = sqlfd = 0;
 	dbptr = NULL;
 
+	if (dbg) {
+		nxentr();
+	}
 	/* ensure that we read the config file if provided */
 	if ((flags & HAVCFG) == HAVCFG) {
 		retc = readconfig(cfgfile);
@@ -198,6 +201,9 @@ cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *e
 			nxerr("Something has gone horribly wrong!");
 			return(-1);
 	}
+	if (dbg) {
+		nxexit();
+	}
 	return(retc);
 }
 
@@ -209,6 +215,9 @@ readconfig(const char *conffile) {
 	cfd = retc = 0;
 	dbdata = NULL;
 
+	if (dbg) {
+		nxentr();
+	}
 	if ((dbdata = calloc((size_t)1, sizeof(dbconfig))) == NULL) {
 		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n", 
 				__progname, __FILE__, __LINE__, __func__, strerror(errno));
@@ -223,6 +232,9 @@ readconfig(const char *conffile) {
 		parseconfig(&cfd, dbdata);
 	}
 	/* now that we have an open fd, read the file, likely k/v format */
+	if (dbg) {
+		nxexit();
+	}
 	cfree(dbdata, sizeof(dbconfig));
 	close(cfd);
 	return(retc);
@@ -236,6 +248,10 @@ connect(const char *dbname, sqlite3 *dbptr) {
 	int retc;
 	struct stat dbstat;
 	retc = 0;
+
+	if (dbg) {
+		nxentr();
+	}
 	if (dbname == NULL) {
 		retc = -1;
 	}
@@ -252,6 +268,9 @@ connect(const char *dbname, sqlite3 *dbptr) {
 	if ((retc = sqlite3_open_v2(dbname, &dbptr, SQLITE_OPEN_READWRITE|SQLITE_OPEN_NOMUTEX|SQLITE_OPEN_SHAREDCACHE, NULL)) != SQLITE_OK) {
 		nxerr(sqlite3_errstr(retc));
 	}
+	if (dbg) {
+		nxexit();
+	}
 	return(retc);
 }
 
@@ -264,15 +283,22 @@ decrypt(const char *dbname, const char *enckey) {
 	int retc;
 	struct stat dbfile, keyfile;
 	retc = 0;
+
+	if (dbg) {
+		nxentr();
+	}
 	/* simple tests to ensure passed data actually exists */
 	if ((retc = stat(dbname, &dbfile)) != 0) {
 		nxerr(strerror(errno));
+		if (dbg) {nxexit();}
 		return(retc);
 	}
 	if ((retc = stat(enckey, &keyfile)) != 0) {
 		nxerr(strerror(errno));
+		if (dbg) {nxexit();}
 		return(retc);
 	}
+	if (dbg) {nxexit();}
 	return(retc);
 }
 
@@ -290,6 +316,10 @@ initialize(sqlite3 *dbptr, int *sqlfd) {
 	sqlite3_stmt *budgetq;
 	retc = 0;
 	sqlinit = NULL; sqlstart = NULL; sqltail = NULL;
+
+	if (dbg) {
+		nxentr();
+	}
 
 	/* Check to ensure we don't have NULL pointers */
 	if ((dbptr == NULL) || (sqlfd == NULL)) {
@@ -316,6 +346,9 @@ initialize(sqlite3 *dbptr, int *sqlfd) {
 		}
 	}
 
+	if (dbg) {
+		nxexit();
+	}
 	return(retc);
 }
 
@@ -327,6 +360,9 @@ opensql(const char *sqlfile, int *sqlfd) {
 	int retc;
 	retc = 0;
 
+	if (dbg) {
+		nxentr();
+	}
 	/* Quick sanity check */
 	if ((sqlfile == NULL) || (sqlfd == NULL)) {
 		nxerr("This should not be possible, NULL pointers presented");
@@ -339,6 +375,7 @@ opensql(const char *sqlfile, int *sqlfd) {
 		retc = -2;
 	}
 
+	if (dbg) { nxexit();}
 	/* Nothing else necessary, simply return with the file descriptor assigned */
 	return(retc);
 }

@@ -55,6 +55,9 @@
 
 /* Macros for runtime issues */
 #define notimp(a) fprintf(stderr,"WRN: %s [%s:%u] %s: -%c is not implemented\n", __progname, __FILE__, __LINE__, __func__, a)
+#define nxentr() fprintf(stderr,"DBG: %s [%s:%u] Entering %s\n",__progname,__FILE__,__LINE__,__func__)
+#define nxexit() fprintf(stderr,"DBG: %s [%s:%u] Exiting %s\n",__progname, __FILE__,__LINE__,__func__)
+/* XXX: These may need reworking to properly print the stuff intended during runtime */
 #define nxerr(message) fprintf(stderr,"ERR: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
 #define nxwrn(message) fprintf(stderr,"WRN: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
 #define nxdbg(message) fprintf(stderr,"DBG: %s [%s:%u] %s: %s\n", __progname,__FILE__,__LINE__,__func__,message)
