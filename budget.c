@@ -70,7 +70,7 @@
 #include "budget.h"
 #endif
 /* */
-#ifndef __BUDGETCONF_H
+#ifndef __EXILE_BUDGETCONF_H
 #include "budgetconf.h"
 #endif
 
@@ -112,41 +112,69 @@ main(int ac, char **av) {
 	char *dbname, *cfgfile, *enckey, *initfile;
 	retc = 0;
 	flags = NOMASK;
-	while ((ch = getopt(ac, av, "hDId:ik:v:f:C:")) != -1) {
+	while ((ch = getopt(ac, av, "hDId:ik:vf:C:")) != -1) {
 		switch (ch) {
 			case 'C':
+				/* Config file, overrides defaults */
 				flags |= HAVCFG;
 				notimp(ch);
 				break;
+			case 'D':
+				/* Used to signal that runtime tracing printouts are desired */
+				dbg = true;
+				break;
+			case 'I':
+				/* Initialize the database */
+				notimp(ch);
+				flags |= INITDB;
+				break;
 			case 'd':
+				/* Database file, overrides default */
 				flags |= HAVEDB;
 				notimp(ch);
 				break;
-			case 'D':
-				dbg = true;
+			case 'f':
+				/* SQL file to read from or write to */
+				notimp(ch);
+				flags |= HAVSQL;
 				break;
 			case 'h':
+				/* Do not force early termination, allow main() to cleanup properly */
 				flags &= NOMASK;
 				flags |= HELPME;
 				usage();
-				/* unless an initialization allocation failed retc should not be non-zero now */
-				return(retc);
+				break;
+			case 'i':
+				/* User wants to run an interactive session, may need a library like editline */
+				notimp(ch);
+				flags |= CONINT;
+				break;
 			case 'k':
-				flags |= HAVKEY;
 				/* key to use for the database decryption (asymmetric cipher), may or may not be password protected */
+				flags |= HAVKEY;
+				notimp(ch);
+				break;
+			case 'v':
+				/* TODO: Look at migration from bitmap flag values and a way to reliably check more han just the database file header */
+				/* Verify database headers look correct, may include checksums in later versions */
 				notimp(ch);
 				break;
 			default:
 				notimp(ch);
+				/* XXX: This may not actually be faster that the usual means of storing a variable */
 				flags &= NOMASK;
 				flags |= HELPME;
 				usage();
-				return(retc);
+				break;
 		}
 	}
-	ac -= optind;
-	av += optind;
-	retc = cook(dbname, initfile, cfgfile, enckey, flags);
+	/* Test to see if HELPME is set */
+	if ((flags & HELPME) != HELPME) {
+		ac -= optind;
+		av += optind;
+		retc = cook(dbname, initfile, cfgfile, enckey, flags);
+	}
+	/* Clean up after any dynamic allocations made */
 	return(retc);
 }
 
@@ -196,10 +224,14 @@ cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *e
 				/* ensure the file descriptor is actually closed */
 				close(sqlfd);
 			}
+		case HAVKEY|INITOK:
+			/* Bootstrap encrypted database */
+			nxwrn("The encrypted bootstrap process is not yet implemented");
+			break;
 		default:
 			/* Something has gone wrong */
 			nxerr("Something has gone horribly wrong!");
-			return(-1);
+			retc = -1;
 	}
 	if (dbg) {
 		nxexit();

@@ -36,7 +36,7 @@
  */
 
 /* Before anything else, ensure we have our include macro set */
-#define __BUDGETCONF_H
+#define __EXILE_BUDGETCONF_H
 
 /* Only necessary header for types used in this file */
 #include <sys/types.h>

@@ -43,7 +43,7 @@
 #ifndef __EXILE_BUDGET_H
 #include "budget.h"
 #endif
-#ifndef __BUDGETCONF_H
+#ifndef __EXILE_BUDGETCONF_H
 #include "budgetconf.h"
 #endif
 
