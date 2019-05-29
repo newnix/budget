@@ -183,11 +183,15 @@ usage(void) {
 	fprintf(stderr,"%s: Simple personal finance tracker\n"
 			"\t%s [flags] [command] [args]\n"
 			"Flags:\n"
+			"\t-C  Specify the configuration file to use\n"
 			"\t-D  Enable debugging printouts\n"
+			"\t-I  Bootstrap the database for use in budgeting\n"
 			"\t-d  Specify the budget database to use (Default: %s%s/%s)\n"
-			"\t-f  Specify a SQL file to use in bootstrap/exchange functions\n"
+			"\t-f  Specify a SQL file to use in bootstrap/interchange functions\n"
 			"\t-h  This help message\n"
+			"\t-i  Open the database for interactive use\n"
 			"\t-k  Asymmetric decryption key location\n"
+			"\t-v  Validate the database integrity\n"
 			"Commands:\n"
 			"\t...Still Loading...\n"
 			,__progname, __progname, DEFAULT_BUDGET_PARENTDIR, DEFAULT_BUDGET_DIR, DEFAULT_BUDGET_DB);
@@ -213,7 +217,9 @@ cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *e
 	/* Branch off based on flag value */
 	switch (flags & CKMASK) {
 		case HAVEDB:
-			retc = connect(dbname, dbptr);
+			if (connect(dbname, dbptr) == 0) {
+				/* TODO: Pass to a function that either accepts or generates a transaction control structure */
+			}
 			break;
 		case HAVKEY|HAVEDB:
 			retc = decrypt(dbname, enckey);
@@ -239,7 +245,11 @@ cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *e
 	return(retc);
 }
 
-/* read in the configuration file if provided */
+/* 
+ * read in the configuration file if provided 
+ * May need to be rewoked to either set global vars or return a pointer for the 
+ * configuration data that gets copied into the transaction control structure
+ */
 int
 readconfig(const char *conffile) {
 	int retc, cfd;
@@ -250,6 +260,7 @@ readconfig(const char *conffile) {
 	if (dbg) {
 		nxentr();
 	}
+	/* XXX: Does this need dynamic allocation? */
 	if ((dbdata = calloc((size_t)1, sizeof(dbconfig))) == NULL) {
 		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n", 
 				__progname, __FILE__, __LINE__, __func__, strerror(errno));
