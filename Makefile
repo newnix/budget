@@ -10,14 +10,15 @@ SRCS = budget.c budgetconf.c budget_subc.c
 ## while it shouldn't make much of a difference in practice, it can reduce the amount of compilation done
 OBJS = budget.o budgetconf.o budget_subc.o
 INCS = -I/usr/local/include
-LIBS = -L/usr/local/lib
+LIBS = -L/usr/local/lib -lsqlite3
 TARGETS = check debug install uninstall reinstall help config diff commit push status test tests
 
 CC = clang-devel
-DBG ?= -ggdb
+DBG ?= -ggdb -fsanitize-cfi-cross-dso 
 LDFLAGS = --gc-sections,-icf=all,-zrelro,-zcombreloc,-znow
-CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -Werror -Wall -Wextra -pedantic -march=native -mtune=native ${INCS} ${LIBS} -lsqlite3 \
-				 -Wparentheses -Wmissing-prototypes -Wstrict-prototypes -fuse-ld=${GOLD} 
+CFLAGS = -Oz -std=c99 -fpic -fpie -fPIC -fPIE -Wl,${LDFLAGS} -Werror -Wall -Wextra -pedantic -march=native -mtune=native  \
+				 -fstrict-return -fstrict-enums -Wparentheses -Wmissing-prototypes -Wstrict-prototypes -fstack-protector-strong \
+				 -Qn -fstack-protector-all -fmerge-all-constants -pipe -fstrict-aliasing -fuse-ld=${GOLD} 
 ## I prefer the llvm toolchain, but in practice the GOLD linker could be better for some use cases
 LD = /usr/local/bin/ld.lld-devel
 GOLD = /usr/bin/ld.gold

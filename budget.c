@@ -92,9 +92,11 @@
 extern char *__progname;
 extern char **environ;
 extern bool dbg;
+extern bool noop;
 
 /* Initialize necessary externs */
 bool dbg = false;
+bool noop = false;
 
 /* Only function specific to this file aside from main() */
 static void usage(void);
@@ -140,8 +142,7 @@ main(int ac, char **av) {
 				break;
 			case 'h':
 				/* Do not force early termination, allow main() to cleanup properly */
-				flags &= NOMASK;
-				flags |= HELPME;
+				flags = HELPME;
 				usage();
 				break;
 			case 'i':
@@ -152,6 +153,11 @@ main(int ac, char **av) {
 			case 'k':
 				/* key to use for the database decryption (asymmetric cipher), may or may not be password protected */
 				flags |= HAVKEY;
+				notimp(ch);
+				break;
+			case 'n':
+				/* Do not actually write anything, especially used for runtime tracing */
+				noop = true;
 				notimp(ch);
 				break;
 			case 'v':
@@ -170,9 +176,8 @@ main(int ac, char **av) {
 	}
 	/* Test to see if HELPME is set */
 	if ((flags & HELPME) != HELPME) {
-		ac -= optind;
 		av += optind;
-		retc = cook(dbname, initfile, cfgfile, enckey, flags);
+		retc = cook(dbname, initfile, cfgfile, enckey, av, flags);
 	}
 	/* Clean up after any dynamic allocations made */
 	return(retc);
@@ -197,8 +202,11 @@ usage(void) {
 			,__progname, __progname, DEFAULT_BUDGET_PARENTDIR, DEFAULT_BUDGET_DIR, DEFAULT_BUDGET_DB);
 }
 
+/* 
+ * Determine if we can continue to another function, and pass necessary data to continue processing 
+ */
 int
-cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *enckey, uint8_t flags) {
+cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *enckey, char **argstr, uint8_t flags) {
 	int retc, sqlfd;
 	sqlite3 *dbptr;
 	retc = sqlfd = 0;
@@ -219,6 +227,9 @@ cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *e
 		case HAVEDB:
 			if (connect(dbname, dbptr) == 0) {
 				/* TODO: Pass to a function that either accepts or generates a transaction control structure */
+				if (argstr != NULL) {
+					retc = parsecmd(argstr,dbptr);
+				}
 			}
 			break;
 		case HAVKEY|HAVEDB:
@@ -264,13 +275,13 @@ readconfig(const char *conffile) {
 	if ((dbdata = calloc((size_t)1, sizeof(dbconfig))) == NULL) {
 		fprintf(stderr, "ERR: %s [%s:%u] %s: %s\n", 
 				__progname, __FILE__, __LINE__, __func__, strerror(errno));
-		return(1);
+		retc = 1;
 	}
-	if ((cfd = open(conffile, O_RDONLY|O_CLOEXEC)) < 0 ) {
+	if (retc == 0 && (cfd = open(conffile, O_RDONLY|O_CLOEXEC)) < 0 ) {
 		nxerr(strerror(errno));
 		if (errno == ENOENT) {
+			/* Default config does not exist, create it */
 			sparseconfig(conffile);
-			return(2);
 		}
 		parseconfig(&cfd, dbdata);
 	}
@@ -278,8 +289,9 @@ readconfig(const char *conffile) {
 	if (dbg) {
 		nxexit();
 	}
-	cfree(dbdata, sizeof(dbconfig));
-	close(cfd);
+	/* Ensure we don't try to free unallocated space */
+	if (dbdata == NULL) { cfree(dbdata, sizeof(dbconfig)); }
+	if (cfd != 0) { close(cfd); }
 	return(retc);
 }
 
@@ -300,7 +312,7 @@ connect(const char *dbname, sqlite3 *dbptr) {
 	}
 	if ((retc = stat(dbname, &dbstat)) != 0) {
 		nxerr(strerror(errno));
-		fprintf(stderr, "Ensure that %s is an initialized budget database\n", dbname);
+		fprintf(stderr, "ERR: %s [%s:%u] %s: Ensure that %s is an initialized budget database\n", __progname,__FILE__,__LINE__,__func__,dbname);
 		return(retc);
 	}
 	if (dbptr != NULL) {
@@ -320,6 +332,7 @@ connect(const char *dbname, sqlite3 *dbptr) {
 /*
  * This function is to decrypt the database file itself, not the contents of the database
  * TODO: Look into how to do this without writing a cleartext database to disk
+ * TODO: Move to another file to handle crypto functions
  */
 int 
 decrypt(const char *dbname, const char *enckey) {
@@ -378,7 +391,7 @@ initialize(sqlite3 *dbptr, int *sqlfd) {
 			/* Now start the read/update loop after recording the start of mapped data */
 			sqlstart = sqlinit; /* recorded to ensure munmap() is called on the start of mapped memory */
 			nxinf("Initializing budgeting database...");
-			for (;(retc == SQLITE_OK) || (retc == SQLITE_DONE); sqlinit = (char * const)sqltail) {
+			for (;sqlinit < (sqlstart + sqlstat.st_size); sqlinit = (char * const)sqltail) {
 				retc = sqlite3_prepare_v2(dbptr,sqlinit,-1,&budgetq,&sqltail); /* pass -1 as length to read up to NULL terminator */
 				retc = sqlite3_step(budgetq);
 				if (retc != SQLITE_DONE) {
@@ -392,6 +405,8 @@ initialize(sqlite3 *dbptr, int *sqlfd) {
 	if (dbg) {
 		nxexit();
 	}
+	/* Close the database connection */
+	sqlite3_close(dbptr);
 	return(retc);
 }
 

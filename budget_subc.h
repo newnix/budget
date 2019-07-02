@@ -46,6 +46,7 @@
  */
 #include <err.h>
 #include <errno.h>
+#include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -55,3 +56,4 @@
  * readaction() and parsecmd() need reworking to properly inherit the 
  * command structure definitions being used, so the function definitions make sense
  */
+int parsecmd(char **argstr, sqlite3 *dbptr);

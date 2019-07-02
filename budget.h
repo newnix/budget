@@ -122,7 +122,7 @@ typedef struct __dbcmd {
 } dbmcd;
 
 /* Function Prototypes */
-int cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *enckey, uint8_t flags);
+int cook(const char *dbname, const char *sqlfile, const char *cfgfile, const char *enckey, char **argstr, uint8_t flags);
 int readconfig(const char *conffile);
 int initialize(sqlite3 *dbptr, int *sqlfd);
 int opensql(const char *sqlfile, int *sqlfd);
